@@ -15,7 +15,7 @@ commands = [
     ["cp", "-r", f"{cwd}/hairdudecli/", "/usr/local/lib/"],
     ["cp", f"{cwd}/hdcli.py", "/usr/local/bin/hdcli"],
     ["chmod", "+x", "/usr/local/bin/hdcli"],
-    ["cp", f"{cwd}/auto_complete/hdcli", "/usr/share/bash-completion/completions/hdcli"],
+    ["cp", f"{cwd}/auto_complete/hdcli", "/etc/bash_completion.d//hdcli"],
 ]
 
 for command in commands:
