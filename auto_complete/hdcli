@@ -1,0 +1,37 @@
+myCli_completions() {
+    local cur prev
+    cur="${COMP_WORDS[COMP_CWORD]}"   # The word currently being typed
+    prev="${COMP_WORDS[COMP_CWORD-1]}" # The word immediately before the cursor
+
+    # 1. Provide top-level options for the main command
+    if [[ "$COMP_CWORD" -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "login upload download mv report help" -- "$cur") )
+        return 0
+    fi
+
+    # 2. Handle subcommands or options that need their own arguments
+    case "$prev" in
+        "login")
+            # Suggestions specifically for -option2
+            COMPREPLY=( "<username> <password>" )
+            ;;
+        "upload")
+            # Suggesting files if -option1 takes a filename
+            COMPREPLY=( "<local_path> <remote_path>" )
+            ;;
+        "download")
+            COMPREPLY=( "<local_path>" )
+            ;;
+        "mv")
+            COMPREPLY=( "<from_path> <to_path>" )
+            ;;
+        "report")
+            COMPREPLY=( "<issue description>" )
+            ;;
+        #"help")
+         #   COMPREPLY=( $(compgen -d -- "$cur") )
+          #  ;;
+    esac
+}
+
+complete -F myCli_completions hdcli
