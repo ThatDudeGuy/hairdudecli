@@ -5,7 +5,7 @@ myCli_completions() {
 
     # 1. Provide top-level options for the main command
     if [[ "$COMP_CWORD" -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "login upload download mv report help" -- "$cur") )
+        COMPREPLY=( $(compgen -W "login upload download mv report help uninstall update" -- "$cur") )
         return 0
     fi
 
