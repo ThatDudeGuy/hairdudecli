@@ -4,7 +4,7 @@ import pathlib
 
 def try_run_command(command):
     try:
-        subprocess.run(command.split(','))
+        subprocess.run(command)
         print(" ".join(command))
     except Exception as e:
         raise Exception(f"Failed to run command '{command}'") from e
