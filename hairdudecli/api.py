@@ -11,25 +11,24 @@ from requests import Response
 from hairdudecli.commands import Command
 from requests.cookies import cookiejar_from_dict
 from hairdudecli.utils import Logger, FileSize, StatusCode, StatusCodeParser
-from hairdudecli.local_file_handler import save_local_data, get_local_data, DATA_PATH
+from hairdudecli.local_file_handler import (
+    save_local_data,
+    get_local_data,
+    get_cookie_jar,
+    DATA_PATH
+)
 
-base_url = "https://24.22.134.130:10412" if "hairdude" not in os.environ["USER"] else "https://10.0.0.50:10412"
+# base_url = "https://24.22.134.130:10412/api" if "hairdude" not in os.environ["USER"] else "https://10.0.0.50:10412/api"
+base_url = "https://10.0.0.50:10412/api"
+
 
 def requires_cookie(func):
-    def wrap(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         attempts = 0
         while attempts < 2:
-            attempts += 1
-            cookieJar = get_local_data(["last_known_cookie"])
-            if cookieJar is not None:
-                cookie_dict = json.loads(cookieJar["last_known_cookie"].replace("'", '"'))
-                cookieJar = cookiejar_from_dict(cookie_dict=cookie_dict)
-            else:
-                Logger.log(f"Local credentials not found. Run 'hdcli {Command.LOGIN} <username> <password>' to populate credentials.")
-                return
-            
-            result: Response = func(*args, cookieJar=cookieJar, **kwargs)
+            result: Response = func(*args, **kwargs)
             status = StatusCodeParser.parse(result)
+            
             if status == StatusCode.Success or result.status_code == StatusCode.Redirect:
                 break
             else:
@@ -37,12 +36,15 @@ def requires_cookie(func):
                 if len(creds) == 2:
                     login([Command.LOGIN, creds["user"], creds["pass"]])
             time.sleep(1)
+            attempts += 1
 
         if attempts >= 2:
-            Logger.error(f"Use command 'hdcli {Command.REPORT}' to report bug")
+            Logger.error(
+                f"Max retried exceeded. Try again. If you think this is an issue with the tool itself, run the command 'hdcli {Command.REPORT}' "
+                "or create an issue here: https://github.com/ThatDudeGuy/hairdudecli/issues"
+            )
         return result
-                
-    return wrap
+    return wrapper
 
 @requires_cookie
 def report(args: list[str], cookieJar=None) -> Response:
@@ -54,23 +56,26 @@ def login(args: list[str]) -> Response:
     user = args[start + 1]
     passw = args[start + 2]
 
-    response = requests.post(f"{base_url}/api", json={"user": user, "pass": passw}, verify=False)
-    # Parser will handle any failures
-    StatusCodeParser.parse(response)
+    try:
+        response = requests.post(f"{base_url}", json={"user": user, "pass": passw}, verify=False)
+        # Parser will handle any failures
+        StatusCodeParser.parse(response)
+    except Exception as e:
+        Logger.error(f"Server Unreachable: {e}")
+        sys.exit(1)
     
-    save_local_data([
-        ("last_known_cookie", f"{response.cookies.get_dict()}")
-    ])
-    Logger.log(f"Saved cookie! {response.cookies.get_dict()}")
+    save_local_data([("last_known_cookie", f"{response.cookies.get_dict()}")])
+    Logger.log("Login successful!")
 
     prompt = get_local_data(["ask_to_save_creds"])
+
     if prompt is None or (isinstance(prompt, dict) and len(prompt) == 0) or prompt.get("ask_to_save_creds") is False:
         answer = input("Do you want to keep your credentials saved? (y/n): ")
         if answer.lower() == 'y':
             save_local_data( [("user", user), ("pass", passw)] )
-            Logger.log(f"Credentials saved in {DATA_PATH}!")
 
             answer = input("Remember my decision? (y/n): ")
+
             if answer.lower() == 'n':
                 save_local_data([("ask_to_save_creds", False)])
             elif answer.lower() == 'y':
@@ -81,6 +86,7 @@ def login(args: list[str]) -> Response:
             ("user", user), 
             ("pass", passw), 
         ])
+
     return response
 
 
@@ -129,9 +135,9 @@ def upload_files(args: list[str], cookieJar=None) -> Response:
         Logger.log(f"Uploading {filename:^30s} {str(FileSize(len(fileData))):<8s} | {i:2d} / {total_uploads:<2d}", end="\r")
 
         response = requests.post(
-            url=f"{base_url}/api/upload",
+            url=f"{base_url}/upload",
             data=fileData,
-            cookies=cookieJar,
+            cookies=get_cookie_jar() if cookieJar is None else cookieJar,
             verify=False,
             headers={"filename": filename, "path": path}
         )
@@ -153,7 +159,7 @@ def download_files(args: list[str], cookieJar=None) -> Response:
     while answer != "" and answer != "done":
         try:
             if len(selections) == 0:
-                answer = input("Type in the corresponding value of the file you would like to download and hit enter: ")
+                answer = input(f"Type in the corresponding value of the file you would like to download and hit enter: {answer}")
             else:
                 answer = input(f"Provide another value or enter an empty line to complete this process. Your selections: {selections} ")
 
@@ -173,10 +179,11 @@ def download_files(args: list[str], cookieJar=None) -> Response:
             print(f"Bad Input. You need to provide an integer value between the values 1-{len(filepaths)}: ")          
     
     response = requests.post(
-        url=f"{base_url}/api/download",
+        url=f"{base_url}/download",
         json={"paths": ";".join(selections) if len(selections) > 1 else f"{selections[0]+';'}"},
-        cookies=cookieJar,
+        cookies=get_cookie_jar() if cookieJar is None else cookieJar,
         verify=False,
+        stream=True
     )
     
     # TODO: Catch the error if permission is denied
@@ -190,12 +197,12 @@ def download_files(args: list[str], cookieJar=None) -> Response:
 def move_file(args: list[str], cookieJar=None) -> Response:
     start = args.index(Command.MOVE)
 
-    response = requests.get(url=f"{base_url}/api/move", cookies=cookieJar, verify=False)
+    response = requests.get(url=f"{base_url}/move", cookies=get_cookie_jar() if cookieJar is None else cookieJar, verify=False)
 
 # TODO: Display the file size of each file in the console
 @requires_cookie
 def get_user_files_and_directories(args: list[str], cookieJar=None) -> Response:
-    response = requests.get(url=f"{base_url}/api/files", cookies=cookieJar, verify=False)
+    response = requests.get(url=f"{base_url}/files", cookies=get_cookie_jar() if cookieJar is None else cookieJar, verify=False)
 
     if response.status_code == StatusCode.Success.value:
         paths = response.json()

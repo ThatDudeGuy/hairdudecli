@@ -1,5 +1,8 @@
 import json
 from pathlib import Path
+from hairdudecli.commands import Command
+from hairdudecli.utils import Logger
+from requests.cookies import cookiejar_from_dict
 
 DATA_PATH = Path.home() / ".local/share/hdcli.json"
 
@@ -45,3 +48,13 @@ def save_local_data(key_values: list[tuple]): # 2 tuple
 
     local_data.write(json.dumps(local_json))
     local_data.close()
+    Logger.log(f"Credentials saved in {DATA_PATH}!")
+
+def get_cookie_jar():
+    cookieJar = get_local_data(["last_known_cookie"])
+    if cookieJar is not None:
+        cookie_dict = json.loads(cookieJar["last_known_cookie"].replace("'", '"'))
+        cookieJar = cookiejar_from_dict(cookie_dict=cookie_dict)
+    else:
+        Logger.log(f"Local credentials not found. Run 'hdcli {Command.LOGIN} <username> <password>' to populate credentials.")
+    return cookieJar
