@@ -1,12 +1,12 @@
 import sys
 from pathlib import Path
 from hairdudecli.utils import Logger
-from hairdudecli.commands import COMMANDS, Command
+from hairdudecli.commands import Command
 
 def multi_command_check(args:list[str]) -> bool:
     command_count = 0
     for command in args:
-        if command in COMMANDS:
+        if Command.exists(command):
             command_count += 1
         if command_count >= 2:
             Logger.error(f"Only one command is allowed at a time. Remove '{command}' and each subsequent command after it.")

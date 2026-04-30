@@ -6,13 +6,17 @@ class Command():
     GET_FILES = "getfiles"
     REPORT = "report"
 
-COMMANDS = frozenset(
-    [
-        Command.LOGIN, 
-        Command.UPLOAD,
-        Command.DOWNLOAD,
-        Command.MOVE,
-        Command.GET_FILES,
-        Command.REPORT,
-    ]
-)
+    COMMANDS = frozenset(
+        [
+            LOGIN, 
+            UPLOAD,
+            DOWNLOAD,
+            MOVE,
+            GET_FILES,
+            REPORT,
+        ]
+    )
+
+
+    def exists(command) -> bool:
+        return command in Command.COMMANDS
