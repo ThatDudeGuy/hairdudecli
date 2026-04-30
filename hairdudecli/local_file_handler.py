@@ -16,31 +16,36 @@ def get_local_data(values: list[str]):
         local_data = open(DATA_PATH, "r")
         try:
             local_json: dict = json.load(local_data)
+            data = {}
             for value in values:
                 if local_json.get(value) is not None:
-                    data = {value: local_json[value]}
+                    data.update({value: local_json[value]})
         except Exception as e:
             print(f"Failed to get_local_data: {e}")
         local_data.close()
     except FileNotFoundError:
         return None
-    finally:
-        return data
+    
+    return data
 
 def save_local_data(key_values: list[tuple]): # 2 tuple
-    try:
-        local_data = open(DATA_PATH, "r")
-    except FileNotFoundError:
-        local_data = open(DATA_PATH, "w")
-        local_data.close()
-    
-    local_data = open(DATA_PATH, "r")
+    if not isinstance(key_values, list):
+        raise Exception("Param: key_values must be a list of tuples")
+    elif len(key_values) > 0:
+        for pair in key_values:
+            if len(pair) != 2:
+                raise Exception("Each tuple in param 'key_values' must be of length 2")    
+
     local_json = {}
-    try:
-        local_json = json.load(local_data)
-        local_data.close()
-    except Exception as e:
-        print("No user file found. Proceeding to create it...")
+
+    if Path.exists(DATA_PATH):
+        local_data = open(DATA_PATH, "r")
+        try:
+            local_json = json.load(local_data)
+            local_data.close()
+        except Exception:
+            # File contains no data or is malformed
+            pass
 
     local_data = open(DATA_PATH, "w")
     for kv in key_values:
