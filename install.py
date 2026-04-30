@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-import subprocess
 import pathlib
+import subprocess
 
 def try_run_command(command):
     try:
@@ -13,9 +13,12 @@ cwd = pathlib.Path.cwd()
 
 commands = [
     ["cp", "-r", f"{cwd}/hairdudecli/", "/usr/local/lib/"],
+    ["chown", "-r", "$USER:$USER", "/usr/local/lib/hairdudecli/"],
     ["cp", f"{cwd}/hdcli.py", "/usr/local/bin/hdcli"],
+    ["chown", "$USER:$USER", "/usr/local/bin/hdcli"],
     ["chmod", "+x", "/usr/local/bin/hdcli"],
-    ["cp", f"{cwd}/auto_complete/hdcli", "/etc/bash_completion.d//hdcli"],
+    ["cp", f"{cwd}/auto_complete/hdcli", "/etc/bash_completion.d/hdcli"],
+    ["chown", "$USER:$USER", "/etc/bash_completion.d/hdcli"],
 ]
 
 for command in commands:
